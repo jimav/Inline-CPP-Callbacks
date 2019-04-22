@@ -1,0 +1,76 @@
+INTRODUCTION:
+
+Inline::CPP::Callbacks -- Write C++ class methods in Perl.
+
+Inline::CPP lets you write Perl subroutines and classes in C++.
+This is an extension which lets you write methods of C++ classes in Perl.
+
+This works by "filtering" your C++ source to insert proxy implementations
+of the methods which you want forwarded back to Perl.   This is
+indicated by coding a quasi "macro" as the method implementation.
+A related "macro" generates entire method definitions for all
+otherwise-unimplemented abstract methods in any base class.
+
+Currently*, this tool is invoked using the standard user-defined-filter 
+mechanism provided by Inline & Inline::CPP.  For example:
+
+    use Inline::CPP::Callbacks 'get_callback_filter';
+
+    use Inline CPP => <<'CPPEND' FILTERS => [get_callback_filter()] ;
+
+       class MyClass {
+         public:
+           void methodA() { ... } /* normal method implemented in C++ */
+           void methodB(int a) { PERLIMPL } /* calls back to Perl */
+       }
+
+       class Abstract {
+         public:
+           void dispatch(int n, int arg) {
+             switch (n) {
+               case 0: method0(arg); break;
+               case 1: method1(arg); break;
+               case 2: method2(arg); break;
+               default: throw("invalid run arg");
+             }
+           }
+           virtual void method0(int) = 0;
+           virtual void method1(int) = 0;
+           virtual void method2(int) = 0;
+       };
+       class Derived : public Abstract {
+           PERLIMPL  /* forward all abstract base-class methods to Perl */
+       };
+CPPEND
+
+my $obj = Derived->new;
+$obj->dispatch(2, 42);
+
+package MyClass;
+sub perl_methodB { ... }
+
+package Derived;
+sub perl_method0 { ... }
+sub perl_method1 { ... }
+sub perl_method2 { ... }
+
+*This is an EXPERIMENTAL proof-of-concept.  It is a separate source filter 
+which parses the C++ code using a modified copy of the parser
+used by Inline::CPP.  In the future it may be possible to share the same
+parser, possibly with a different user API.
+
+-----------------------------------------------------------------------------
+INSTALLATION:
+
+perl Makefile.PL
+make
+make test
+make install
+
+-----------------------------------------------------------------------------
+INFORMATION:
+
+- For more information about this module see 'perldoc Inline::CPP::Callbacks'.
+- For more information on Inline::CPP see 'perldoc Inline::CPP'.
+
+Copyright (c) 2019 Jim Avera. All Rights Reserved.

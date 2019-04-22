@@ -1,0 +1,4 @@
+Revision history for Perl extension Inline::CPP::Callbacks.
+
+0.01
+  - Port in code from from Perlcallbacks.pm proof-of-concept
