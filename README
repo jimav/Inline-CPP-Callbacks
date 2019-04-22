@@ -14,49 +14,60 @@ otherwise-unimplemented abstract methods in any base class.
 Currently*, this tool is invoked using the standard user-defined-filter 
 mechanism provided by Inline & Inline::CPP.  For example:
 
-    use Inline::CPP::Callbacks 'get_callback_filter';
+   use Inline::CPP::Callbacks 'get_callback_filter';
+   use Inline CPP => <<'CPPEND' FILTERS => [get_callback_filter()] ;
 
-    use Inline CPP => <<'CPPEND' FILTERS => [get_callback_filter()] ;
+        class MyClass {
+          public:
+            void methodA() { ... } /* implemented here in C++ */
+            void methodB(int a) { FILTER_CALLPERL } /* forward to Perl */
+        }
 
-       class MyClass {
-         public:
-           void methodA() { ... } /* normal method implemented in C++ */
-           void methodB(int a) { PERLIMPL } /* calls back to Perl */
-       }
+        class Abstract {
+          public:
+            void dispatch(int n, int arg) {
+              switch (n) {
+                case 0: method0(arg); break;
+                case 1: method1(arg); break;
+                case 2: method2(arg); break;
+                case 3: method3(arg); break;
+                default: throw("invalid dispatch arg");
+              }
+            }
+            virtual int    method0(int) = 0;
+            virtual double method1(int) = 0;
+            virtual void   method2(int) = 0;
+            virtual void   method3(int) = 0;
+        };
+        class Derived : public Abstract {
+            /* A pure-virtual implemented normally in C++ */
+            virtual int method0(int arg) { return 12345; }
 
-       class Abstract {
-         public:
-           void dispatch(int n, int arg) {
-             switch (n) {
-               case 0: method0(arg); break;
-               case 1: method1(arg); break;
-               case 2: method2(arg); break;
-               default: throw("invalid run arg");
-             }
-           }
-           virtual void method0(int) = 0;
-           virtual void method1(int) = 0;
-           virtual void method2(int) = 0;
-       };
-       class Derived : public Abstract {
-           PERLIMPL  /* forward all abstract base-class methods to Perl */
-       };
-CPPEND
+            /* Auto-generate implementations of all other pure virtuals */
+            FILTER_IMPL_PUREVIRTS
+        };
+        CPPEND
 
-my $obj = Derived->new;
-$obj->dispatch(2, 42);
+        my $obj = Derived->new;
+        $obj->set_perl_object($obj);
 
-package MyClass;
-sub perl_methodB { ... }
+        $obj->dispatch(2, 42);
 
-package Derived;
-sub perl_method0 { ... }
-sub perl_method1 { ... }
-sub perl_method2 { ... }
+        exit;
 
-*This is an EXPERIMENTAL proof-of-concept.  It is a separate source filter 
-which parses the C++ code using a modified copy of the parser
-used by Inline::CPP.  In the future it may be possible to share the same
+        package MyClass;
+
+        sub perl_methodB { ... }
+
+        package Derived;
+
+        sub perl_method1 { ... }
+        sub perl_method2 { ... }
+        sub perl_method3 { ... }
+
+*This is an EXPERIMENTAL proof-of-concept which parses the C++ code 
+using a modified copy of the parser used by Inline::CPP.  
+In the future it may be possible to share the same
 parser, possibly with a different user API.
 
 -----------------------------------------------------------------------------
